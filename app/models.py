@@ -1,8 +1,10 @@
-from pymongo import MongoClient
+from pymongo import MongoClient, DESCENDING
 from werkzeug.security import generate_password_hash
 from datetime import datetime
 from app.user import User
 from bson import ObjectId
+from config import Config
+
 
 client = MongoClient("mongodb+srv://r_17:azq178@chatapp-9ovee.mongodb.net/test?retryWrites=true&w=majority")
 
@@ -10,6 +12,7 @@ chat_db = client.get_database("chatDB")
 users_collection = chat_db.get_collection("users")
 rooms_collection = chat_db.get_collection("rooms")
 room_members_collection = chat_db.get_collection("room_members")
+messages_collection = chat_db.get_collection("messages")
 
 def save_user(username, email, password):
 	password_hash = generate_password_hash(password)
@@ -83,5 +86,25 @@ def is_room_admin(room_id, username):
 
 
 
+"""
+Messages Operations
+"""
 
 
+def save_message(room_id, text, sender):
+	messages_collection.insert_one({
+		'room_id': room_id,
+		'text': text,
+		'sender': sender,
+		'date_sent': datetime.utcnow()
+		})
+
+MESSAGE_LIMIT = 3
+
+def get_messages(room_id, page=0):
+	offset = page * MESSAGE_LIMIT
+	messages =  list(messages_collection.find({'room_id': room_id}).sort('_id', DESCENDING).limit(MESSAGE_LIMIT).skip(offset))
+
+	for message in messages:
+		message["date_sent"] = message["date_sent"].strftime("[%b %d, %H:%M]")
+	return messages[::-1]

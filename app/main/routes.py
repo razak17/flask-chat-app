@@ -2,9 +2,9 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_socketio import SocketIO, join_room, leave_room
 from app.main import bp
 from flask_login import login_required, current_user
-from app.models import User, save_room, add_room_members, get_rooms_for_user, get_room, is_room_member, get_room_members, is_room_admin, update_room, remove_room_members
+from app.models import User, save_room, add_room_members, get_rooms_for_user, get_room, is_room_member, get_room_members, is_room_admin, update_room, remove_room_members, get_messages
 from app import db
-
+from bson.json_util import dumps
 
 
 @bp.route('/home')
@@ -41,7 +41,8 @@ def room(room_id):
 	room = get_room(room_id)
 	if room and is_room_member(room_id, current_user.username):
 		room_members = get_room_members(room_id)
-		return render_template('room.html', username=current_user.username, room=room, room_members=room_members)
+		messages = get_messages(room_id)
+		return render_template('room.html', username=current_user.username, room=room, room_members=room_members, messages=messages)
 	else:
 		return "Room not found", 404
 
@@ -70,5 +71,18 @@ def edit_room(room_id):
 			room_members_str = ", ".join(new_members)
 
 		return render_template('edit_room.html', room=room, room_members_str=room_members_str)
+	else:
+		return "Room not found", 404
+
+@bp.route("/room/<string:room_id>/history", methods=["GET", "POST"])
+@login_required
+def chat_history(room_id):
+	room = get_room(room_id)
+	if room and is_room_member(room_id, current_user.username):
+		page = int(request.args.get('page', 0))
+		messages = get_messages(room_id, page)
+		return dumps(messages)
+
+		# return render_template('room.html', username=current_user.username, room=room, room_members=room_members, messages=messages)
 	else:
 		return "Room not found", 404
