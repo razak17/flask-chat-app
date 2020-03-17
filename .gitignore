@@ -1,0 +1,12 @@
+# virtualenv
+venv/
+
+logs/
+
+__pyacache__
+app/__pyacache__
+
+app.db
+
+.env
+.flaskenv
